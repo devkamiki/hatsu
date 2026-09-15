@@ -1,15 +1,23 @@
-# Hatsu
+# Hatsu | 初
 
-A small webmail that talks to **your** IMAP, SMTP, CalDAV and CardDAV servers. OpenPGP keys stay in the browser.
+```
+   ┌─────────┐
+   │ ✉  はつ │
+   │  ╲___╱  │
+   └────V────┘
 
-It is meant to feel like [ALPS](https://github.com/migadu/alps) or Rainloop: one container, no mail store of its own.
+```
+
+A small webmail that talks to your IMAP, SMTP, CalDAV and CardDAV servers. OpenPGP keys stay in the browser.
+
+It is meant to feel like [Alps](https://git.sr.ht/~migadu/alps) or Rainloop: one container, no mail store of its own.
 
 ## What it does
 
 - Read, search, reply, send, star, delete against an external IMAP/SMTP account
 - Detect common providers (Migadu, Fastmail, Gmail, iCloud, …) and RFC 6186 SRV records
 - Generate, import, encrypt, decrypt, sign, verify with [OpenPGP.js](https://openpgpjs.org/) in the browser
-- Discover public keys over **WKD** and **HKP** (`keys.openpgp.org`)
+- Discover public keys over WKD and HKP (`keys.openpgp.org`)
 - Import keys from CardDAV `KEY` fields or by looking up a contact’s email
 - Month calendar against CalDAV, including RRULE expansion
 - Accept / decline / tentative on `text/calendar` invitations, store the event, send an iTIP REPLY
