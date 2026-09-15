@@ -208,7 +208,7 @@ export function Mail({ session }: { session: SessionInfo }) {
                 <iframe
                   title="Message"
                   sandbox=""
-                  srcDoc={`<!doctype html><html><head><style>body{font:16px/1.5 Iowan Old Style, Palatino, serif;color:#1f1a16}img{max-width:100%}</style></head><body>${active.html}</body></html>`}
+                  srcDoc={`<!doctype html><html><head><style>body{font:16px/1.5 system-ui,sans-serif;color:#111;background:transparent}img{max-width:100%}</style></head><body>${active.html}</body></html>`}
                 />
               </div>
             ) : (

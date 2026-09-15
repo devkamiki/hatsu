@@ -85,7 +85,7 @@ export function Login({ onIn }: { onIn: (s: SessionInfo) => void }) {
     <div className="login">
       <div className="login-card">
         <div className="brand">
-          <div className="seal">初</div>
+          <span className="seal">初</span>
           <div>
             <h1>Hatsu</h1>
             <p>Mail, keys, calendar. Your servers.</p>

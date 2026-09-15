@@ -41,10 +41,8 @@ export function App() {
   return (
     <div className="shell">
       <header className="top">
-        <div className="brand" style={{ margin: 0, gap: "0.55rem" }}>
-          <div className="seal" style={{ width: 32, height: 32, fontSize: 16, borderRadius: 8 }}>
-            初
-          </div>
+        <div className="brand" style={{ margin: 0 }}>
+          <span className="seal">初</span>
           <strong>Hatsu</strong>
         </div>
         <nav className="tabs">
