@@ -1,0 +1,39 @@
+services:
+  hatsu:
+    build: .
+    image: hatsu:local
+    ports:
+      - "8080:8080"
+    environment:
+      HATSU_PORT: "8080"
+      HATSU_HKP: "https://keys.openpgp.org"
+    restart: unless-stopped
+
+  # Optional local IMAP/SMTP (any username/password).
+  #   docker compose --profile demo up --build
+  # Then in Hatsu log in with:
+  #   IMAP  greenmail:3993  (TLS)
+  #   SMTP  greenmail:3465  (TLS)
+  # From the host browser, use localhost instead of greenmail.
+  greenmail:
+    image: greenmail/standalone:2.1.3
+    profiles: ["demo"]
+    environment:
+      GREENMAIL_OPTS: "-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.users.login=email"
+    ports:
+      - "3025:3025"
+      - "3143:3143"
+      - "3465:3465"
+      - "3993:3993"
+
+  # Optional CalDAV/CardDAV. Default login: user / password  (Radicale auth off)
+  radicale:
+    image: tomsquest/docker-radicale:3.5.4.0
+    profiles: ["demo"]
+    ports:
+      - "5232:5232"
+    volumes:
+      - radicale-data:/data
+
+volumes:
+  radicale-data:
