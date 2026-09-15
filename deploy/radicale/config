@@ -1,0 +1,15 @@
+[server]
+hosts = 0.0.0.0:5232
+
+[auth]
+type = none
+
+[rights]
+type = owner_only
+
+[storage]
+type = multifilesystem
+filesystem_folder = /data/collections
+
+[web]
+type = none

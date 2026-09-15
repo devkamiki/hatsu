@@ -1,5 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, type Discovery, type SessionInfo } from "./api";
+
+function imapSecure(port: number): boolean {
+  return port === 993 || port === 3993;
+}
+function smtpSecure(port: number): boolean {
+  return port === 465 || port === 3465;
+}
 
 export function Login({ onIn }: { onIn: (s: SessionInfo) => void }) {
   const [email, setEmail] = useState("");
@@ -28,6 +35,19 @@ export function Login({ onIn }: { onIn: (s: SessionInfo) => void }) {
     setAdvanced(true);
   }
 
+  useEffect(() => {
+    api
+      .defaults()
+      .then((d) => {
+        if (!d) return;
+        apply(d);
+        if (d.email) setEmail(d.email);
+        setInsecure(d.tlsInsecure);
+        setPassword("demo");
+      })
+      .catch(() => undefined);
+  }, []);
+
   async function detect() {
     setErr("");
     try {
@@ -46,8 +66,8 @@ export function Login({ onIn }: { onIn: (s: SessionInfo) => void }) {
         email,
         password,
         name: name || undefined,
-        imap: imapHost ? { host: imapHost, port: Number(imapPort), secure: Number(imapPort) === 993 } : undefined,
-        smtp: smtpHost ? { host: smtpHost, port: Number(smtpPort), secure: Number(smtpPort) === 465 } : undefined,
+        imap: imapHost ? { host: imapHost, port: Number(imapPort), secure: imapSecure(Number(imapPort)) } : undefined,
+        smtp: smtpHost ? { host: smtpHost, port: Number(smtpPort), secure: smtpSecure(Number(smtpPort)) } : undefined,
         caldav: caldav || undefined,
         carddav: carddav || undefined,
         tlsInsecure: insecure,

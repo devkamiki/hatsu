@@ -1,13 +1,6 @@
 import { resolveSrv } from "node:dns/promises";
-import type { ServerCfg } from "./types.ts";
-
-export type Discovery = {
-  imap: ServerCfg;
-  smtp: ServerCfg;
-  caldav?: string;
-  carddav?: string;
-  notes: string[];
-};
+import { appDefaults } from "./defaults.ts";
+import type { Discovery, ServerCfg } from "./types.ts";
 
 type Hint = {
   imap: ServerCfg;
@@ -106,6 +99,16 @@ async function wellKnown(domain: string, kind: "caldav" | "carddav"): Promise<st
 export async function discover(email: string): Promise<Discovery> {
   const domain = email.split("@")[1]?.toLowerCase();
   if (!domain) throw new Error("Invalid email");
+  const demo = appDefaults();
+  if (demo && ["example.com", "greenmail", "localhost", "localtest.me"].includes(domain)) {
+    return {
+      imap: demo.imap,
+      smtp: demo.smtp,
+      caldav: demo.caldav,
+      carddav: demo.carddav,
+      notes: demo.notes,
+    };
+  }
   const notes: string[] = [];
   const hint = HINTS[domain];
 

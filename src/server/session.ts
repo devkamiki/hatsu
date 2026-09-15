@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import type { createDAVClient } from "tsdav";
+import { resolveHostError } from "./defaults.ts";
 import type { ServerCfg, SessionInfo } from "./types.ts";
 
 type Dav = Awaited<ReturnType<typeof createDAVClient>>;
@@ -121,6 +123,11 @@ async function ensureImap(s: Session): Promise<ImapFlow> {
 }
 
 export async function verifyImap(cfg: ServerCfg, email: string, password: string, tlsInsecure: boolean): Promise<void> {
+  try {
+    await lookup(cfg.host);
+  } catch (err) {
+    throw Object.assign(new Error(resolveHostError(cfg.host, err)), { status: 401 });
+  }
   const client = new ImapFlow({
     host: cfg.host,
     port: cfg.port,

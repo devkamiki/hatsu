@@ -22,23 +22,23 @@ Private keys never leave the browser. IndexedDB holds the armored secret; a pass
 docker compose up --build
 ```
 
-Open http://localhost:8080 and sign in with a real mailbox.
+That starts **Hatsu + GreenMail + Radicale** on one network. Open http://localhost:8080 — the login form is pre-filled.
 
-Optional local IMAP/SMTP + CalDAV for demos:
-
-```bash
-docker compose --profile demo up --build
-```
-
-Then in Hatsu (the **server** resolves these hostnames):
-
-| | host | port | TLS |
+| | host *(from inside the Hatsu container)* | port | TLS |
 |---|---|---|---|
-| IMAP | `greenmail` | 3993 | yes |
-| SMTP | `greenmail` | 3465 | yes |
+| IMAP | `greenmail` | 3143 | no |
+| SMTP | `greenmail` | 3025 | no |
 | CalDAV / CardDAV | `http://radicale:5232` | | |
 
-GreenMail accepts any `user@host` / password pair. If you run Hatsu with `npm start` on the host instead of Compose, use `localhost` and the published ports.
+Any email/password works against GreenMail (`demo@example.com` / `demo` is the default).
+
+`ENOTFOUND greenmail` means Hatsu could not see the GreenMail container: you started only the `hatsu` image, or you typed `greenmail` while running Hatsu on the host. The IMAP hostname is resolved **by the Hatsu process**, not by your browser.
+
+- Compose (default): host `greenmail`, port `3143`
+- Hatsu on the host (`npm start`) with compose GreenMail published: host `127.0.0.1`, port `3143`
+- Do not use `localhost` inside the Hatsu container — that is the container itself
+
+To run Hatsu alone against a real mailbox, drop the extra services or override env and fill IMAP/SMTP yourself.
 
 ## Run without Docker
 

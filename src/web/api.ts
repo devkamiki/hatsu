@@ -19,6 +19,12 @@ export type Discovery = {
   notes: string[];
 };
 
+export type AppDefaults = Discovery & {
+  demo: boolean;
+  email?: string;
+  tlsInsecure: boolean;
+};
+
 export type Mailbox = {
   path: string;
   name: string;
@@ -109,6 +115,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => req<{ ok: boolean }>("/api/health"),
+  defaults: () => req<AppDefaults | null>("/api/defaults"),
   discover: (email: string) => req<Discovery>("/api/discover", { method: "POST", body: JSON.stringify({ email }) }),
   login: (body: {
     email: string;

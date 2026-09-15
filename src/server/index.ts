@@ -7,6 +7,7 @@ import { HTTPException } from "hono/http-exception";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { appDefaults, imapSecureForPort, resolveHostError, smtpSecureForPort } from "./defaults.ts";
 import { discover, mergeServer } from "./discover.ts";
 import { parseCalendar, replyIcs, storeIcs } from "./ics.ts";
 import { lookupKey } from "./keys.ts";
@@ -68,6 +69,8 @@ function fail(err: unknown): never {
 
 app.get("/api/health", (c) => c.json({ ok: true, name: "hatsu" }));
 
+app.get("/api/defaults", (c) => c.json(appDefaults()));
+
 app.post("/api/discover", async (c) => {
   const { email } = await c.req.json<{ email?: string }>();
   if (!email || !email.includes("@")) throw new HTTPException(400, { message: "email required" });
@@ -82,17 +85,35 @@ app.post("/api/login", async (c) => {
   if (rateLimit(clientIp(c))) throw new HTTPException(429, { message: "Too many login attempts" });
   const body = (await c.req.json()) as LoginBody;
   if (!body.email || !body.password) throw new HTTPException(400, { message: "email and password required" });
+  const defaults = appDefaults();
   const guessed = await discover(body.email).catch(() => null);
-  const imap = mergeServer(body.imap, guessed?.imap || { host: "", port: 993, secure: true });
-  const smtp = mergeServer(body.smtp, guessed?.smtp || { host: "", port: 587, secure: false });
+  const imapPort = Number(body.imap?.port || defaults?.imap.port || guessed?.imap.port || 993);
+  const smtpPort = Number(body.smtp?.port || defaults?.smtp.port || guessed?.smtp.port || 587);
+  const imap = mergeServer(
+    {
+      ...body.imap,
+      secure: body.imap?.secure ?? imapSecureForPort(imapPort),
+    },
+    defaults?.imap || guessed?.imap || { host: "", port: 993, secure: true },
+  );
+  const smtp = mergeServer(
+    {
+      ...body.smtp,
+      secure: body.smtp?.secure ?? smtpSecureForPort(smtpPort),
+    },
+    defaults?.smtp || guessed?.smtp || { host: "", port: 587, secure: false },
+  );
   if (!imap.host || !smtp.host) throw new HTTPException(400, { message: "IMAP and SMTP hosts are required" });
   try {
-    await verifyImap(imap, body.email, body.password, !!body.tlsInsecure);
+    await verifyImap(imap, body.email, body.password, body.tlsInsecure ?? defaults?.tlsInsecure ?? false);
   } catch (err) {
-    const e = err as { message?: string; responseText?: string; authenticationFailed?: boolean; code?: string };
-    const hint = e.authenticationFailed || /auth|login|failed/i.test(e.message || "")
-      ? "Wrong email or password, or this host needs an app password."
-      : e.responseText || e.message || String(err);
+    const e = err as { message?: string; responseText?: string; authenticationFailed?: boolean };
+    const raw = e.message || String(err);
+    const hint = /ENOTFOUND|EAI_AGAIN|getaddrinfo|ECONNREFUSED|Cannot resolve/i.test(raw)
+      ? resolveHostError(imap.host, err)
+      : e.authenticationFailed || /auth|login/i.test(raw)
+        ? "Wrong email or password, or this host needs an app password."
+        : e.responseText || raw;
     throw new HTTPException(401, { message: `IMAP login failed: ${hint}` });
   }
   const session = createSession({
@@ -101,9 +122,9 @@ app.post("/api/login", async (c) => {
     password: body.password,
     imap,
     smtp,
-    caldav: body.caldav || guessed?.caldav,
-    carddav: body.carddav || guessed?.carddav,
-    tlsInsecure: !!body.tlsInsecure,
+    caldav: body.caldav || defaults?.caldav || guessed?.caldav,
+    carddav: body.carddav || defaults?.carddav || guessed?.carddav,
+    tlsInsecure: body.tlsInsecure ?? defaults?.tlsInsecure ?? false,
   });
   setCookie(c, COOKIE, session.id, {
     httpOnly: true,

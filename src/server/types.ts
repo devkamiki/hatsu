@@ -6,6 +6,14 @@ export type ServerCfg = {
   secure: boolean;
 };
 
+export type Discovery = {
+  imap: ServerCfg;
+  smtp: ServerCfg;
+  caldav?: string;
+  carddav?: string;
+  notes: string[];
+};
+
 export type LoginBody = {
   email: string;
   password: string;
