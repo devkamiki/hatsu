@@ -16,6 +16,8 @@ export type Session = {
   smtp: ServerCfg;
   caldav?: string;
   carddav?: string;
+  davUser?: string;
+  davPassword?: string;
   tlsInsecure: boolean;
   lastUsed: number;
   imapClient?: ImapFlow;
@@ -70,6 +72,8 @@ export function publicSession(s: Session): SessionInfo {
     smtp: s.smtp,
     caldav: s.caldav,
     carddav: s.carddav,
+    davUser: s.davUser,
+    davSeparate: Boolean(s.davUser || (s.davPassword && s.davPassword !== s.password)),
     tlsInsecure: s.tlsInsecure,
   };
 }

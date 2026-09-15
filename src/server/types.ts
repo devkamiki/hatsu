@@ -22,6 +22,9 @@ export type LoginBody = {
   smtp?: Partial<ServerCfg>;
   caldav?: string;
   carddav?: string;
+  davUser?: string;
+  davPassword?: string;
+  davSeparate?: boolean;
   tlsInsecure?: boolean;
 };
 
@@ -32,6 +35,8 @@ export type SessionInfo = {
   smtp: ServerCfg;
   caldav?: string;
   carddav?: string;
+  davUser?: string;
+  davSeparate: boolean;
   tlsInsecure: boolean;
 };
 

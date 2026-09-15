@@ -18,6 +18,9 @@ export function Login({ onIn }: { onIn: (s: SessionInfo) => void }) {
   const [smtpPort, setSmtpPort] = useState("587");
   const [caldav, setCaldav] = useState("");
   const [carddav, setCarddav] = useState("");
+  const [davSeparate, setDavSeparate] = useState(false);
+  const [davUser, setDavUser] = useState("");
+  const [davPassword, setDavPassword] = useState("");
   const [insecure, setInsecure] = useState(false);
   const [advanced, setAdvanced] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
@@ -70,6 +73,9 @@ export function Login({ onIn }: { onIn: (s: SessionInfo) => void }) {
         smtp: smtpHost ? { host: smtpHost, port: Number(smtpPort), secure: smtpSecure(Number(smtpPort)) } : undefined,
         caldav: caldav || undefined,
         carddav: carddav || undefined,
+        davSeparate,
+        davUser: davSeparate ? davUser || email : undefined,
+        davPassword: davSeparate ? davPassword || undefined : undefined,
         tlsInsecure: insecure,
       });
       onIn(s);
@@ -152,17 +158,49 @@ export function Login({ onIn }: { onIn: (s: SessionInfo) => void }) {
                   />
                 </label>
               </div>
-              <label className="field">
-                <span>CalDAV URL</span>
-                <input value={caldav} onChange={(e) => setCaldav(e.target.value)} placeholder="https://caldav.example.com" />
-              </label>
-              <label className="field">
-                <span>CardDAV URL</span>
-                <input value={carddav} onChange={(e) => setCarddav(e.target.value)} placeholder="https://carddav.example.com" />
-              </label>
               <label className="check">
                 <input type="checkbox" checked={insecure} onChange={(e) => setInsecure(e.target.checked)} />
                 Allow insecure TLS
+              </label>
+            </>
+          )}
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={davSeparate}
+              onChange={(e) => {
+                setDavSeparate(e.target.checked);
+                if (e.target.checked && !davUser) setDavUser(email);
+              }}
+            />
+            Calendar and contacts are on a different server
+          </label>
+          {davSeparate && (
+            <>
+              <div className="note">
+                For Fruux, mailbox.org, and similar hosts that are not your mail login, or that use a different password.
+              </div>
+              <label className="field">
+                <span>CalDAV URL</span>
+                <input value={caldav} onChange={(e) => setCaldav(e.target.value)} placeholder="https://dav.fruux.com" />
+              </label>
+              <label className="field">
+                <span>CardDAV URL</span>
+                <input value={carddav} onChange={(e) => setCarddav(e.target.value)} placeholder="https://dav.fruux.com" />
+              </label>
+              <label className="field">
+                <span>DAV username</span>
+                <input value={davUser} onChange={(e) => setDavUser(e.target.value)} placeholder={email || "same as email"} autoComplete="off" />
+              </label>
+              <label className="field">
+                <span>DAV password</span>
+                <input
+                  value={davPassword}
+                  onChange={(e) => setDavPassword(e.target.value)}
+                  type="password"
+                  placeholder="required if different from mail"
+                  autoComplete="off"
+                />
               </label>
             </>
           )}

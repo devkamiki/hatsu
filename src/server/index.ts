@@ -116,14 +116,17 @@ app.post("/api/login", async (c) => {
         : e.responseText || raw;
     throw new HTTPException(401, { message: `IMAP login failed: ${hint}` });
   }
+  const davSeparate = Boolean(body.davSeparate);
   const session = createSession({
     email: body.email,
     name: body.name,
     password: body.password,
     imap,
     smtp,
-    caldav: body.caldav || defaults?.caldav || guessed?.caldav,
-    carddav: body.carddav || defaults?.carddav || guessed?.carddav,
+    caldav: davSeparate ? body.caldav || undefined : body.caldav || defaults?.caldav || guessed?.caldav,
+    carddav: davSeparate ? body.carddav || undefined : body.carddav || defaults?.carddav || guessed?.carddav,
+    davUser: davSeparate ? body.davUser || body.email : undefined,
+    davPassword: davSeparate ? body.davPassword || body.password : undefined,
     tlsInsecure: body.tlsInsecure ?? defaults?.tlsInsecure ?? false,
   });
   setCookie(c, COOKIE, session.id, {
@@ -150,7 +153,14 @@ app.get("/api/session", (c) => {
 
 app.post("/api/settings", async (c) => {
   const s = requireSession(c);
-  const body = await c.req.json<{ caldav?: string; carddav?: string; name?: string }>();
+  const body = await c.req.json<{
+    caldav?: string;
+    carddav?: string;
+    name?: string;
+    davUser?: string;
+    davPassword?: string;
+    davSeparate?: boolean;
+  }>();
   if (body.caldav !== undefined) {
     s.caldav = body.caldav || undefined;
     s.calClient = undefined;
@@ -158,6 +168,23 @@ app.post("/api/settings", async (c) => {
   if (body.carddav !== undefined) {
     s.carddav = body.carddav || undefined;
     s.cardClient = undefined;
+  }
+  if (body.davSeparate === false) {
+    s.davUser = undefined;
+    s.davPassword = undefined;
+    s.calClient = undefined;
+    s.cardClient = undefined;
+  } else {
+    if (body.davUser !== undefined) {
+      s.davUser = body.davUser || undefined;
+      s.calClient = undefined;
+      s.cardClient = undefined;
+    }
+    if (body.davPassword !== undefined) {
+      s.davPassword = body.davPassword || undefined;
+      s.calClient = undefined;
+      s.cardClient = undefined;
+    }
   }
   if (body.name !== undefined) s.name = body.name;
   return c.json(publicSession(s));

@@ -8,6 +8,8 @@ export type SessionInfo = {
   smtp: ServerCfg;
   caldav?: string;
   carddav?: string;
+  davUser?: string;
+  davSeparate: boolean;
   tlsInsecure: boolean;
 };
 
@@ -125,12 +127,21 @@ export const api = {
     smtp?: Partial<ServerCfg>;
     caldav?: string;
     carddav?: string;
+    davUser?: string;
+    davPassword?: string;
+    davSeparate?: boolean;
     tlsInsecure?: boolean;
   }) => req<SessionInfo>("/api/login", { method: "POST", body: JSON.stringify(body) }),
   logout: () => req("/api/logout", { method: "POST" }),
   session: () => req<SessionInfo>("/api/session"),
-  settings: (body: { caldav?: string; carddav?: string; name?: string }) =>
-    req<SessionInfo>("/api/settings", { method: "POST", body: JSON.stringify(body) }),
+  settings: (body: {
+    caldav?: string;
+    carddav?: string;
+    name?: string;
+    davUser?: string;
+    davPassword?: string;
+    davSeparate?: boolean;
+  }) => req<SessionInfo>("/api/settings", { method: "POST", body: JSON.stringify(body) }),
   mailboxes: () => req<{ mailboxes: Mailbox[] }>("/api/mailboxes"),
   messages: (mailbox: string, page = 1, q?: string) =>
     req<{ messages: MessageSummary[]; exists: number; unseen?: number; page: number; limit: number }>(

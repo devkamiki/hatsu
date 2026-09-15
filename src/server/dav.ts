@@ -20,7 +20,7 @@ async function dav(kind: "caldav" | "carddav", url: string, s: Session): Promise
   if (cached) return cached;
   const client = await createDAVClient({
     serverUrl: url,
-    credentials: { username: s.email, password: s.password },
+    credentials: { username: s.davUser || s.email, password: s.davPassword || s.password },
     authMethod: "Basic",
     defaultAccountType: kind,
     fetch: makeFetch(s.tlsInsecure),

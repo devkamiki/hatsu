@@ -15,6 +15,9 @@ export function App() {
   const [settings, setSettings] = useState(false);
   const [caldav, setCaldav] = useState("");
   const [carddav, setCarddav] = useState("");
+  const [davSeparate, setDavSeparate] = useState(false);
+  const [davUser, setDavUser] = useState("");
+  const [davPassword, setDavPassword] = useState("");
   const [theme, setTheme] = useState(localStorage.getItem("hatsu-theme") || "");
 
   useEffect(() => {
@@ -24,6 +27,8 @@ export function App() {
         setSession(s);
         setCaldav(s.caldav || "");
         setCarddav(s.carddav || "");
+        setDavSeparate(s.davSeparate);
+        setDavUser(s.davUser || s.email);
       })
       .catch(() => setSession(null));
   }, []);
@@ -36,7 +41,20 @@ export function App() {
   }, [theme]);
 
   if (session === undefined) return <div className="empty">Opening…</div>;
-  if (!session) return <Login onIn={(s) => { setSession(s); setCaldav(s.caldav || ""); setCarddav(s.carddav || ""); }} />;
+  if (!session) {
+    return (
+      <Login
+        onIn={(s) => {
+          setSession(s);
+          setCaldav(s.caldav || "");
+          setCarddav(s.carddav || "");
+          setDavSeparate(s.davSeparate);
+          setDavUser(s.davUser || s.email);
+          setDavPassword("");
+        }}
+      />
+    );
+  }
 
   return (
     <div className="shell">
@@ -86,20 +104,49 @@ export function App() {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                const s = await api.settings({ caldav, carddav });
+                const s = await api.settings({
+                  caldav,
+                  carddav,
+                  davSeparate,
+                  davUser: davSeparate ? davUser || undefined : undefined,
+                  davPassword: davSeparate ? davPassword || undefined : undefined,
+                });
                 setSession(s);
+                setDavPassword("");
                 setSettings(false);
               }}
               style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}
             >
+              <label className="check">
+                <input type="checkbox" checked={davSeparate} onChange={(e) => setDavSeparate(e.target.checked)} />
+                Calendar and contacts are on a different server
+              </label>
               <label className="field">
                 <span>CalDAV</span>
-                <input value={caldav} onChange={(e) => setCaldav(e.target.value)} />
+                <input value={caldav} onChange={(e) => setCaldav(e.target.value)} placeholder="https://dav.fruux.com" />
               </label>
               <label className="field">
                 <span>CardDAV</span>
-                <input value={carddav} onChange={(e) => setCarddav(e.target.value)} />
+                <input value={carddav} onChange={(e) => setCarddav(e.target.value)} placeholder="https://dav.fruux.com" />
               </label>
+              {davSeparate && (
+                <>
+                  <label className="field">
+                    <span>DAV username</span>
+                    <input value={davUser} onChange={(e) => setDavUser(e.target.value)} autoComplete="off" />
+                  </label>
+                  <label className="field">
+                    <span>DAV password</span>
+                    <input
+                      type="password"
+                      value={davPassword}
+                      onChange={(e) => setDavPassword(e.target.value)}
+                      placeholder="leave blank to keep"
+                      autoComplete="off"
+                    />
+                  </label>
+                </>
+              )}
               <div className="note">
                 IMAP {session.imap.host}:{session.imap.port} · SMTP {session.smtp.host}:{session.smtp.port}
               </div>
