@@ -6,6 +6,7 @@ import type { AttachmentMeta, InviteHint, Mailbox, MessageSummary, PgpHint } fro
 import type { Session } from "./session.ts";
 import { withImap } from "./session.ts";
 import { parseCalendar } from "./ics.ts";
+import { rfc2822Utc } from "../shared/composeText.ts";
 
 function addrs(v: AddressObject | AddressObject[] | undefined): { name?: string; address: string }[] {
   if (!v) return [];
@@ -284,6 +285,8 @@ export type SendBody = {
   inReplyTo?: string;
   references?: string;
   raw?: string;
+  formatFlowed?: boolean;
+  dateUtc?: boolean;
   attachments?: { filename: string; content: string; contentType?: string }[];
 };
 
@@ -300,6 +303,7 @@ export async function sendMail(s: Session, body: SendBody): Promise<{ messageId:
 
   const from = s.name ? `"${s.name.replace(/"/g, "")}" <${s.email}>` : s.email;
   const envelopeTo = [...body.to, ...(body.cc || []), ...(body.bcc || [])];
+  const mail = mailOptions(from, body);
 
   const info = body.raw
     ? await transporter.sendMail({
@@ -307,20 +311,8 @@ export async function sendMail(s: Session, body: SendBody): Promise<{ messageId:
         raw: body.raw,
       })
     : await transporter.sendMail({
-        from,
-        to: body.to.join(", "),
-        cc: body.cc?.join(", "),
+        ...mail,
         bcc: body.bcc?.join(", "),
-        subject: body.subject,
-        text: body.text,
-        html: body.html,
-        inReplyTo: body.inReplyTo,
-        references: body.references,
-        attachments: body.attachments?.map((a) => ({
-          filename: a.filename,
-          content: Buffer.from(a.content, "base64"),
-          contentType: a.contentType,
-        })),
       });
 
   const raw = body.raw || (await buildRawForSent(from, body, info.messageId || ""));
@@ -338,15 +330,12 @@ export async function sendMail(s: Session, body: SendBody): Promise<{ messageId:
   return { messageId: info.messageId || "" };
 }
 
-async function buildRawForSent(from: string, body: SendBody, messageId: string): Promise<string> {
-  const transporter = nodemailer.createTransport({ streamTransport: true, newline: "unix" });
-  const info = await transporter.sendMail({
+function mailOptions(from: string, body: SendBody, messageId?: string): nodemailer.SendMailOptions {
+  const mail: nodemailer.SendMailOptions = {
     from,
     to: body.to.join(", "),
     cc: body.cc?.join(", "),
     subject: body.subject,
-    text: body.text,
-    html: body.html,
     inReplyTo: body.inReplyTo,
     references: body.references,
     messageId,
@@ -355,7 +344,27 @@ async function buildRawForSent(from: string, body: SendBody, messageId: string):
       content: Buffer.from(a.content, "base64"),
       contentType: a.contentType,
     })),
-  });
+  };
+  if (body.dateUtc) mail.date = rfc2822Utc();
+  if (body.html && body.formatFlowed) {
+    mail.alternatives = [
+      { contentType: "text/plain; charset=utf-8; format=flowed", content: body.text || "" },
+      { contentType: "text/html; charset=utf-8", content: body.html },
+    ];
+  } else if (body.html) {
+    mail.html = body.html;
+    mail.text = body.text;
+  } else if (body.formatFlowed) {
+    mail.alternatives = [{ contentType: "text/plain; charset=utf-8; format=flowed", content: body.text || "" }];
+  } else {
+    mail.text = body.text;
+  }
+  return mail;
+}
+
+async function buildRawForSent(from: string, body: SendBody, messageId: string): Promise<string> {
+  const transporter = nodemailer.createTransport({ streamTransport: true, newline: "unix" });
+  const info = await transporter.sendMail(mailOptions(from, body, messageId));
   const message = info.message;
   if (Buffer.isBuffer(message)) return message.toString("utf8");
   const chunks: Buffer[] = [];

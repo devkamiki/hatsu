@@ -15,6 +15,7 @@ export function Mail({ session }: { session: SessionInfo }) {
   const [err, setErr] = useState("");
   const [compose, setCompose] = useState(false);
   const [reply, setReply] = useState<Message | undefined>();
+  const [forward, setForward] = useState(false);
   const [cals, setCals] = useState<{ url: string; displayName: string }[]>([]);
   const [inviteCal, setInviteCal] = useState("");
   const [busyInvite, setBusyInvite] = useState(false);
@@ -80,7 +81,7 @@ export function Mail({ session }: { session: SessionInfo }) {
   return (
     <div className={`mail ${active ? "show-read" : ""}`}>
       <aside className="folders">
-        <button className="btn seal" style={{ width: "100%", marginBottom: "0.8rem" }} onClick={() => { setReply(undefined); setCompose(true); }}>
+        <button className="btn seal" style={{ width: "100%", marginBottom: "0.8rem" }} onClick={() => { setReply(undefined); setForward(false); setCompose(true); }}>
           Compose
         </button>
         {boxes.map((b) => (
@@ -149,8 +150,11 @@ export function Mail({ session }: { session: SessionInfo }) {
               {crypto?.error && <span className="badge warn">{crypto.error}</span>}
             </div>
             <div className="actions">
-              <button className="btn small" onClick={() => { setReply(active); setCompose(true); }}>
+              <button className="btn small" onClick={() => { setReply(active); setForward(false); setCompose(true); }}>
                 Reply
+              </button>
+              <button className="btn ghost small" onClick={() => { setReply(active); setForward(true); setCompose(true); }}>
+                Forward
               </button>
               <button
                 className="btn ghost small"
@@ -233,6 +237,7 @@ export function Mail({ session }: { session: SessionInfo }) {
         <Compose
           session={session}
           replyTo={reply}
+          forward={forward}
           onClose={() => setCompose(false)}
           onSent={() => loadList()}
         />

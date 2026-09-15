@@ -6,6 +6,7 @@ import { Keys } from "./Keys";
 import { Login } from "./Login";
 import { Mail } from "./Mail";
 import { lockPrivate } from "./pgp";
+import { loadComposePrefs, saveComposePrefs, type ComposePrefs } from "./prefs";
 
 type Tab = "mail" | "calendar" | "contacts" | "keys";
 
@@ -19,6 +20,7 @@ export function App() {
   const [davUser, setDavUser] = useState("");
   const [davPassword, setDavPassword] = useState("");
   const [theme, setTheme] = useState(localStorage.getItem("hatsu-theme") || "");
+  const [composePrefs, setComposePrefs] = useState<ComposePrefs>(() => loadComposePrefs());
 
   useEffect(() => {
     api
@@ -104,6 +106,7 @@ export function App() {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
+                saveComposePrefs(composePrefs);
                 const s = await api.settings({
                   caldav,
                   carddav,
@@ -150,6 +153,60 @@ export function App() {
               <div className="note">
                 IMAP {session.imap.host}:{session.imap.port} · SMTP {session.smtp.host}:{session.smtp.port}
               </div>
+              <h3>Compose</h3>
+              <label className="field">
+                <span>Default format</span>
+                <select
+                  value={composePrefs.format}
+                  onChange={(e) => setComposePrefs({ ...composePrefs, format: e.target.value as ComposePrefs["format"] })}
+                >
+                  <option value="plain">Plain text</option>
+                  <option value="html">HTML</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Plain text wrapping</span>
+                <select
+                  value={composePrefs.wrap}
+                  onChange={(e) => setComposePrefs({ ...composePrefs, wrap: e.target.value as ComposePrefs["wrap"] })}
+                >
+                  <option value="flowed">format=flowed</option>
+                  <option value="wrap">Hard wrap at 78</option>
+                  <option value="none">Do not wrap</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Reply position</span>
+                <select
+                  value={composePrefs.replyPosition}
+                  onChange={(e) =>
+                    setComposePrefs({ ...composePrefs, replyPosition: e.target.value as ComposePrefs["replyPosition"] })
+                  }
+                >
+                  <option value="above">Reply above the original</option>
+                  <option value="below">Reply under the original</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Quote style</span>
+                <select
+                  value={composePrefs.quoteStyle}
+                  onChange={(e) =>
+                    setComposePrefs({ ...composePrefs, quoteStyle: e.target.value as ComposePrefs["quoteStyle"] })
+                  }
+                >
+                  <option value="icloud">iCloud — On … someone wrote:</option>
+                  <option value="outlook">Outlook — original message headers</option>
+                </select>
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={composePrefs.dateUtc}
+                  onChange={(e) => setComposePrefs({ ...composePrefs, dateUtc: e.target.checked })}
+                />
+                Write Date headers as UTC
+              </label>
               <button className="btn">Save</button>
             </form>
           </div>

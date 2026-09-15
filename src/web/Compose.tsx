@@ -1,36 +1,70 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type Message, type SessionInfo } from "./api";
 import { encryptAndWrap, getUnlocked } from "./pgp";
+import { loadComposePrefs } from "./prefs";
+import { assembleBody, forwardSubject, quoteHtml, quotePlain, wrapText } from "../shared/composeText";
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/blockquote>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 export function Compose({
   session,
   replyTo,
+  forward = false,
   onClose,
   onSent,
 }: {
   session: SessionInfo;
   replyTo?: Message;
+  forward?: boolean;
   onClose: () => void;
   onSent: () => void;
 }) {
+  const prefs = loadComposePrefs();
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState("");
   const [text, setText] = useState("");
+  const [format, setFormat] = useState<"plain" | "html">(prefs.format);
   const [encrypt, setEncrypt] = useState(false);
   const [sign, setSign] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [lookup, setLookup] = useState("");
+  const htmlRef = useRef<HTMLDivElement>(null);
+  const primed = useRef(false);
 
   useEffect(() => {
-    if (!replyTo) return;
+    if (!replyTo || primed.current) return;
+    primed.current = true;
     const dest = (replyTo.replyTo.length ? replyTo.replyTo : replyTo.from).map((a) => a.address).join(", ");
-    setTo(dest);
-    setSubject(replyTo.subject.toLowerCase().startsWith("re:") ? replyTo.subject : `Re: ${replyTo.subject}`);
-    const quote = (replyTo.text || "").split("\n").map((l) => `> ${l}`).join("\n");
-    setText(`\n\n${quote}`);
-  }, [replyTo]);
+    if (forward) {
+      setTo("");
+      setSubject(forwardSubject(replyTo.subject));
+    } else {
+      setTo(dest);
+      setSubject(replyTo.subject.toLowerCase().startsWith("re:") ? replyTo.subject : `Re: ${replyTo.subject}`);
+    }
+    const quote =
+      format === "html"
+        ? quoteHtml(replyTo, prefs.quoteStyle, prefs.dateUtc)
+        : quotePlain(replyTo, prefs.quoteStyle, prefs.dateUtc);
+    const body = assembleBody("", quote, prefs.replyPosition, format === "html");
+    setText(format === "html" ? htmlToText(body) : body);
+    if (format === "html" && htmlRef.current) htmlRef.current.innerHTML = body;
+  }, [replyTo, forward, format, prefs.quoteStyle, prefs.replyPosition, prefs.dateUtc]);
 
   async function onToBlur() {
     const emails = to.split(/[,;\s]+/).map((s) => s.trim()).filter((s) => s.includes("@"));
@@ -60,25 +94,32 @@ export function Compose({
     try {
       const toList = to.split(/[,;]+/).map((s) => s.trim()).filter(Boolean);
       const ccList = cc.split(/[,;]+/).map((s) => s.trim()).filter(Boolean);
+      const html = format === "html" && !encrypt ? htmlRef.current?.innerHTML || "" : undefined;
+      const plain = html ? htmlToText(html) : text;
+      const wrapped = wrapText(plain, html ? "none" : prefs.wrap);
+      if (!wrapped.trim() && !html?.replace(/<[^>]+>/g, "").trim()) throw new Error("Message is empty");
       if ((encrypt || sign) && !getUnlocked() && sign) throw new Error("Unlock your private key on the Keys tab first");
-      const wrapped = await encryptAndWrap({
-        text,
+      const payload = await encryptAndWrap({
+        text: wrapped,
         from: { email: session.email, name: session.name },
         to: toList,
         cc: ccList,
         subject,
         sign,
         encrypt,
-        inReplyTo: replyTo?.messageId,
+        inReplyTo: forward ? undefined : replyTo?.messageId,
         references: [replyTo?.references, replyTo?.messageId].filter(Boolean).join(" ") || undefined,
       });
       await api.send({
         to: toList,
         cc: ccList,
         subject,
-        inReplyTo: replyTo?.messageId,
+        inReplyTo: forward ? undefined : replyTo?.messageId,
         references: [replyTo?.references, replyTo?.messageId].filter(Boolean).join(" ") || undefined,
-        ...wrapped,
+        formatFlowed: !html && !encrypt && prefs.wrap === "flowed",
+        dateUtc: prefs.dateUtc,
+        html: html && !("raw" in payload) ? html : undefined,
+        ...payload,
       });
       onSent();
       onClose();
@@ -89,11 +130,13 @@ export function Compose({
     }
   }
 
+  const title = forward ? "Forward" : replyTo ? "Reply" : "Compose";
+
   return (
     <div className="overlay" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="row">
-          <h2>{replyTo ? "Reply" : "Compose"}</h2>
+          <h2>{title}</h2>
           <button className="btn ghost small" onClick={onClose}>
             Close
           </button>
@@ -112,14 +155,61 @@ export function Compose({
             <span>Subject</span>
             <input value={subject} onChange={(e) => setSubject(e.target.value)} required />
           </label>
-          <label className="field">
-            <span>Message</span>
-            <textarea rows={12} value={text} onChange={(e) => setText(e.target.value)} required />
-          </label>
+          <div className="row">
+            <label className="check">
+              <input
+                type="radio"
+                name="fmt"
+                checked={format === "plain"}
+                onChange={() => setFormat("plain")}
+              />
+              Plain text
+            </label>
+            <label className="check">
+              <input
+                type="radio"
+                name="fmt"
+                checked={format === "html"}
+                onChange={() => {
+                  setFormat("html");
+                  requestAnimationFrame(() => {
+                    if (htmlRef.current && !htmlRef.current.innerHTML) htmlRef.current.innerHTML = text.replace(/\n/g, "<br>");
+                  });
+                }}
+                disabled={encrypt}
+              />
+              HTML
+            </label>
+          </div>
+          {format === "html" && !encrypt ? (
+            <label className="field">
+              <span>Message</span>
+              <div
+                ref={htmlRef}
+                className="html-editor"
+                contentEditable
+                role="textbox"
+                aria-label="Message"
+                onInput={() => setText(htmlToText(htmlRef.current?.innerHTML || ""))}
+              />
+            </label>
+          ) : (
+            <label className="field">
+              <span>Message</span>
+              <textarea rows={12} value={text} onChange={(e) => setText(e.target.value)} required />
+            </label>
+          )}
           {lookup && <div className="note">{lookup}</div>}
           <div className="row">
             <label className="check">
-              <input type="checkbox" checked={encrypt} onChange={(e) => setEncrypt(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={encrypt}
+                onChange={(e) => {
+                  setEncrypt(e.target.checked);
+                  if (e.target.checked) setFormat("plain");
+                }}
+              />
               Encrypt
             </label>
             <label className="check">

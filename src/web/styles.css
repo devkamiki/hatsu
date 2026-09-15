@@ -275,7 +275,22 @@ a { color: var(--ink); }
   padding: 1rem 1.1rem 1.2rem;
 }
 .sheet h2 { margin: 0 0 0.7rem; font-size: 1.1rem; }
+.sheet h3 { margin: 0.4rem 0 0; font-size: 0.95rem; font-weight: 600; }
 .sheet form { display: flex; flex-direction: column; gap: 0.65rem; }
+.html-editor {
+  min-height: 16rem;
+  border: 1px solid var(--line);
+  padding: 0.45rem 0.55rem;
+  outline: none;
+  white-space: pre-wrap;
+}
+.html-editor:focus { border-color: var(--ink); }
+.html-editor blockquote {
+  margin: 0.4rem 0 0 0.6rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--line);
+  color: var(--muted);
+}
 
 /* calendar */
 .cal { height: 100%; display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
