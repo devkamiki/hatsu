@@ -5,12 +5,11 @@
    │ ✉  はつ │
    │  ╲___╱  │
    └────V────┘
-
 ```
 
 A small webmail that talks to your IMAP, SMTP, CalDAV and CardDAV servers. OpenPGP keys stay in the browser.
 
-It is meant to feel like [Alps](https://git.sr.ht/~migadu/alps) or Rainloop: one container, no mail store of its own.
+It is meant to feel like [Alps](https://git.sr.ht/~migadu/alps) or [Rainloop](https://www.rainloop.net/): one container, no mail store of its own.
 
 ## What it does
 
