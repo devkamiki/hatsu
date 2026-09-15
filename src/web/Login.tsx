@@ -120,22 +120,36 @@ export function Login({ onIn }: { onIn: (s: SessionInfo) => void }) {
           ))}
           {advanced && (
             <>
-              <div className="grid2">
+              <div className="hostport">
                 <label className="field">
                   <span>IMAP host</span>
                   <input value={imapHost} onChange={(e) => setImapHost(e.target.value)} placeholder="imap.example.com" />
                 </label>
-                <label className="field">
-                  <span>IMAP port</span>
-                  <input value={imapPort} onChange={(e) => setImapPort(e.target.value)} />
+                <label className="field port">
+                  <span>Port</span>
+                  <input
+                    value={imapPort}
+                    onChange={(e) => setImapPort(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                    inputMode="numeric"
+                    maxLength={5}
+                    aria-label="IMAP port"
+                  />
                 </label>
+              </div>
+              <div className="hostport">
                 <label className="field">
                   <span>SMTP host</span>
                   <input value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} placeholder="smtp.example.com" />
                 </label>
-                <label className="field">
-                  <span>SMTP port</span>
-                  <input value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} />
+                <label className="field port">
+                  <span>Port</span>
+                  <input
+                    value={smtpPort}
+                    onChange={(e) => setSmtpPort(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                    inputMode="numeric"
+                    maxLength={5}
+                    aria-label="SMTP port"
+                  />
                 </label>
               </div>
               <label className="field">
